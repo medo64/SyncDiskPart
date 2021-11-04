@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+
+# Make link
+ln -s /opt/syncbootpart/bin/syncbootpart /usr/bin/syncbootpart 2>/dev/null || true
+
+# Update MAN pages
+mandb -q || true
+
+# Just loading to suppress warning
+. /usr/share/debconf/confmodule || true
+
+# Done
+exit 0

@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+# Remove link
+rm /usr/bin/syncbootpart 2>/dev/null || true
+
+# Update MAN pages
+mandb -q || true
+
+# Purge debconf
+if [ "$1" = "purge" -a -e /usr/share/debconf/confmodule ]; then
+    . /usr/share/debconf/confmodule
+    db_purge
+fi
+
+# Done
+exit 0

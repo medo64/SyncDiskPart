@@ -1,0 +1,11 @@
+Package:        syncbootpart
+Version:        MAJOR.MINOR.PATCH
+Architecture:   ARCHITECTURE
+Maintainer:     Josip Medved <jmedved@jmedved.com>
+Homepage:       https://www.medo64.com/syncbootpart/
+Description:    Syncing boot partitions
+ Goes over mounted boot partitions and uses dd to copy them to matching
+ partitions on another disk.
+Section:        admin
+Priority:       optional
+Depends:        bash (>= 5.0), debconf
