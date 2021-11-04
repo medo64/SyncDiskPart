@@ -5,7 +5,7 @@ set -e
 ln -s /opt/syncbootpart/bin/syncbootpart /usr/bin/syncbootpart 2>/dev/null || true
 
 # Update MAN pages
-mandb -q || true
+mandb -q 2>/dev/null || true
 
 # Just loading to suppress warning
 . /usr/share/debconf/confmodule || true
