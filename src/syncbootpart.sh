@@ -59,6 +59,10 @@ for MNT in "/boot" "/boot/efi"; do
         fi
     done
 
+    if [[ "$MATCHED_DISK" -eq 0 ]]; then
+        echo " ${ANSI_RED}-${ANSI_RESET}"
+    fi
+
 done
 
 if [[ "$FOUND" -eq 0 ]]; then
