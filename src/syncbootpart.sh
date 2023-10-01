@@ -5,11 +5,13 @@ if [ -t 1 ]; then
     ANSI_RED="`[ $(tput colors) -ge 16 ] && tput setaf 9 || tput setaf 1 bold`"
     ANSI_GREEN="`[ $(tput colors) -ge 16 ] && tput setaf 10 || tput setaf 2 bold`"
     ANSI_YELLOW="`[ $(tput colors) -ge 16 ] && tput setaf 11 || tput setaf 3 bold`"
+    ANSI_BLUE="`[ $(tput colors) -ge 16 ] && tput setaf 12 || tput setaf 4 bold`"
     ANSI_CYAN="`[ $(tput colors) -ge 16 ] && tput setaf 14 || tput setaf 6 bold`"
 fi
 
-while getopts "" OPT; do
+while getopts "v" OPT; do
     case $OPT in
+        v)  VERBOSE=$(( VERBOSE + 1 )) ;;
         \?) echo "${ANSI_RED}Invalid option: -$OPTARG!${ANSI_RESET}" >&2 ; exit 254 ;;
         :)  echo "${ANSI_RED}Option -$OPTARG requires an argument!${ANSI_RESET}" >&2 ; exit 254 ;;
     esac
@@ -46,6 +48,10 @@ for MNT in "/boot" "/boot/efi"; do
 
     MATCHED_DISK=0
     for DISK2 in `lsblk -np --output KNAME`; do  # first try UUID match
+        if [[ $VERBOSE -ge 1 ]]; then
+            echo
+            echo -n "  ${ANSI_BLUE}Checking $DISK2${ANSI_RESET}"
+        fi
         if [[ "$DISK" != "$DISK2" ]]; then
             PARTUUID2=`blkid -s PARTUUID -o value $DISK2`
             if [[ "$PARTUUID" == "$PARTUUID2" ]]; then
@@ -55,6 +61,12 @@ for MNT in "/boot" "/boot/efi"; do
                 PROCESSED=$((PROCESSED+1))
                 MATCHED_DISK=1
                 break
+            elif [[ $VERBOSE -ge 2 ]]; then
+                if [[ "$PARTUUID2" == "" ]]; then
+                    echo -n " ${ANSI_BLUE}(no PARTUUID)${ANSI_RESET}"
+                else
+                    echo -n " ${ANSI_BLUE}($PARTUUID2 not matching $PARTUUID)${ANSI_RESET}"
+                fi
             fi
         fi
     done
