@@ -23,6 +23,11 @@ if [[ "$#" -ne 0 ]]; then
     exit 1
 fi
 
+if ! [[ "$USER" == "root" ]]; then
+    echo "${ANSI_RED}Must be root (sudo)!${ANSI_RESET}" >&2
+    exit 2
+fi
+
 
 FOUND=0
 PROCESSED=0
