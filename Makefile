@@ -75,7 +75,7 @@ package: dist
 	@install -m 644 LICENSE.md $(PACKAGE_DIR)/opt/syncbootpart/LICENSE
 	@install -d $(PACKAGE_DIR)/opt/syncbootpart/bin/
 	@install -m 755 src/syncbootpart.sh $(PACKAGE_DIR)/opt/syncbootpart/bin/syncbootpart
-	@fakeroot dpkg-deb --build $(PACKAGE_DIR)/ > /dev/null
+	@fakeroot dpkg-deb -Z gzip --build $(PACKAGE_DIR)/ > /dev/null
 	@cp /tmp/$(PACKAGE_NAME).deb dist/
 	@$(RM) -r $(PACKAGE_DIR)/
 	@lintian --suppress-tags dir-or-file-in-opt dist/$(PACKAGE_NAME).deb
