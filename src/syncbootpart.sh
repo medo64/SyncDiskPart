@@ -51,6 +51,8 @@ for MNT in "/boot" "/boot/efi"; do
     echo -n "${ANSI_CYAN}$MNT${ANSI_RESET}"
     echo -n " ${ANSI_GREEN}$DISK${ANSI_RESET}"
 
+    sync -f $MNT
+
     MATCHED_DISK=0
     for DISK2 in `lsblk -np --output KNAME`; do  # first try UUID match
         if [[ $VERBOSE -ge 1 ]]; then
