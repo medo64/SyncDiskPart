@@ -11,6 +11,9 @@ chmod +x /etc/kernel/postinst.d/zzzzzzz-syncbootpart 2>/dev/null || true
 # Update MAN pages
 mandb -q 2>/dev/null || true
 
+# First run
+/opt/syncbootpart/bin/syncbootpart || true
+
 # Just loading to suppress warning
 . /usr/share/debconf/confmodule || true
 
