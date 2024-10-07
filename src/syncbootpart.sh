@@ -9,8 +9,12 @@ if [ -t 1 ]; then
     ANSI_CYAN="`[ $(tput colors) -ge 16 ] && tput setaf 14 || tput setaf 6 bold`"
 fi
 
-while getopts "v" OPT; do
+DRY_RUN=0
+VERBOSE=0
+
+while getopts "nv" OPT; do
     case $OPT in
+        n)  DRY_RUN=1 ;;
         v)  VERBOSE=$(( VERBOSE + 1 )) ;;
         \?) echo "${ANSI_RED}Invalid option: -$OPTARG!${ANSI_RESET}" >&2 ; exit 254 ;;
         :)  echo "${ANSI_RED}Option -$OPTARG requires an argument!${ANSI_RESET}" >&2 ; exit 254 ;;
@@ -34,58 +38,88 @@ PROCESSED=0
 
 for MNT in "/boot" "/boot/efi"; do
 
-    DISK=`findmnt -n -o source $MNT`
-    if [[ "$DISK" == "" ]]; then
+    PART_SRC=`findmnt -n -o source $MNT`
+    if [[ "$PART_SRC" == "" ]]; then
         echo "${ANSI_YELLOW}Cannot find $MNT mount point${ANSI_RESET}"
         continue
     fi
 
-    PARTUUID=`blkid -s PARTUUID -o value $DISK`
-    if [[ "$PARTUUID" == "" ]]; then
-        echo "${ANSI_YELLOW}Cannot determine partition UUID for $MNT${ANSI_RESET}"
+    PART_SRC_SIZE=`blockdev --getsz $PART_SRC`
+    PART_SRC_UUID=`blkid -s PARTUUID -o value $PART_SRC`
+    PART_SRC_LABEL=`blkid -s PARTLABEL -o value $PART_SRC`
+    if [[ "$PART_SRC_UUID" == "" ]] && [[ "$PART_SRC_LABEL" == "" ]]; then
+        echo "${ANSI_YELLOW}Cannot determine partition UUID or LABEL for $MNT${ANSI_RESET}"
         continue
     fi
 
     FOUND=$((FOUND+1))
 
     echo -n "${ANSI_CYAN}$MNT${ANSI_RESET}"
-    echo -n " ${ANSI_GREEN}$DISK${ANSI_RESET}"
+    echo -n " ${ANSI_GREEN}$PART_SRC${ANSI_RESET}"
 
     sync -f $MNT
 
-    MATCHED_DISK=0
-    for DISK2 in `lsblk -np --output KNAME`; do  # first try UUID match
+    MATCHED_PART=0
+    for PART_DST in `lsblk -np --output KNAME`; do  # first try UUID match
         if [[ $VERBOSE -ge 1 ]]; then
             echo
-            echo -n "  ${ANSI_BLUE}Checking $DISK2${ANSI_RESET}"
+            echo -n "  ${ANSI_BLUE}Checking UUIDs for $PART_DST${ANSI_RESET}"
         fi
-        if [[ "$DISK" != "$DISK2" ]]; then
-            PARTUUID2=`blkid -s PARTUUID -o value $DISK2`
-            if [[ "$PARTUUID" == "$PARTUUID2" ]]; then
-                echo -n " ${ANSI_YELLOW}$DISK2${ANSI_RESET}"
-                echo
-                dd if=$DISK of=$DISK2 bs=1M |& sed -e 's/^/ /'
-                PROCESSED=$((PROCESSED+1))
-                MATCHED_DISK=1
+        if [[ "$PART_SRC" != "$PART_DST" ]]; then
+            PART_DST_UUID=`blkid -s PARTUUID -o value $PART_DST`
+            if [[ "$PART_SRC_UUID" == "$PART_DST_UUID" ]]; then
+                MATCHED_PART=1
                 break
             elif [[ $VERBOSE -ge 2 ]]; then
-                if [[ "$PARTUUID2" == "" ]]; then
+                if [[ "$PART_DST_UUID" == "" ]]; then
                     echo -n " ${ANSI_BLUE}(no PARTUUID)${ANSI_RESET}"
                 else
-                    echo -n " ${ANSI_BLUE}($PARTUUID2 not matching $PARTUUID)${ANSI_RESET}"
+                    echo -n " ${ANSI_BLUE}($PART_DST_UUID not matching $PART_SRC_UUID)${ANSI_RESET}"
                 fi
             fi
         fi
     done
 
-    if [[ "$MATCHED_DISK" -eq 0 ]]; then
+    if [[ "$MATCHED_PART" -eq 0 ]] && [[ "$PART_SRC_LABEL" != "" ]]; then
+        for PART_DST in `lsblk -np --output KNAME`; do  # first try UUID match
+            if [[ $VERBOSE -ge 1 ]]; then
+                echo
+                echo -n "  ${ANSI_BLUE}Checking LABELs for $PART_DST${ANSI_RESET}"
+            fi
+            if [[ "$PART_SRC" != "$PART_DST" ]]; then
+                PART_DST_LABEL=`blkid -s PARTLABEL -o value $PART_DST`
+                if [[ "$PART_SRC_LABEL" == "$PART_DST_LABEL" ]]; then
+                    PART_DST_SIZE=`blockdev --getsz $PART_DST`
+                    if [[ "$PART_SRC_SIZE" == "$PART_DST_SIZE" ]]; then
+                        MATCHED_PART=1
+                        break
+                    fi
+                elif [[ $VERBOSE -ge 2 ]]; then
+                    if [[ "$PART_DST_UUID" == "" ]]; then
+                        echo -n " ${ANSI_BLUE}(no PARTUUID)${ANSI_RESET}"
+                    else
+                        echo -n " ${ANSI_BLUE}($PART_DST_UUID not matching $PART_SRC_UUID)${ANSI_RESET}"
+                    fi
+                fi
+            fi
+        done
+    fi
+
+    if [[ "$MATCHED_PART" -ne 0 ]]; then
+        echo -n " ${ANSI_YELLOW}$PART_DST${ANSI_RESET}"
+        echo
+        if [[ "$DRY_RUN" -eq 0 ]]; then
+            dd if=$PART_SRC of=$PART_DST bs=1M |& sed -e 's/^/ /'
+        fi
+        PROCESSED=$((PROCESSED+1))
+    else
         echo " ${ANSI_RED}-${ANSI_RESET}"
     fi
 
 done
 
 if [[ "$FOUND" -eq 0 ]]; then
-    echo "${ANSI_RED}Cannot find any boot partitions${ANSI_RESET}"
+    echo "${ANSI_RED}Cannot match any boot partitions${ANSI_RESET}"
     exit 1
 fi
 
