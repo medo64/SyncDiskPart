@@ -106,11 +106,15 @@ for MNT in "/boot" "/boot/efi"; do
     fi
 
     if [[ "$MATCHED_PART" -ne 0 ]]; then
+        if [[ $VERBOSE -ge 1 ]]; then echo; fi
+
         echo -n " ${ANSI_YELLOW}$PART_DST${ANSI_RESET} "
+
         BLOCK_SIZE=1048576  # 1 MB block
         BLOCK_COUNT=100
         TOTAL_BLOCKS=$(( PART_SRC_SIZE / BLOCK_SIZE ))  # must be 1 MB aligned
         START_BLOCK=0
+
         while [ $TOTAL_BLOCKS -gt 0 ]; do
             echo -n "."
             if [ $TOTAL_BLOCKS -ge $BLOCK_COUNT ]; then
