@@ -44,7 +44,7 @@ for MNT in "/boot" "/boot/efi"; do
         continue
     fi
 
-    PART_SRC_SIZE=`blockdev --getsz $PART_SRC`
+    PART_SRC_SIZE=`blockdev --getsize64 $PART_SRC`
     PART_SRC_UUID=`blkid -s PARTUUID -o value $PART_SRC`
     PART_SRC_LABEL=`blkid -s PARTLABEL -o value $PART_SRC`
     if [[ "$PART_SRC_UUID" == "" ]] && [[ "$PART_SRC_LABEL" == "" ]]; then
@@ -89,7 +89,7 @@ for MNT in "/boot" "/boot/efi"; do
             if [[ "$PART_SRC" != "$PART_DST" ]]; then
                 PART_DST_LABEL=`blkid -s PARTLABEL -o value $PART_DST`
                 if [[ "$PART_SRC_LABEL" == "$PART_DST_LABEL" ]]; then
-                    PART_DST_SIZE=`blockdev --getsz $PART_DST`
+                    PART_DST_SIZE=`blockdev --getsize64 $PART_DST`
                     if [[ "$PART_SRC_SIZE" == "$PART_DST_SIZE" ]]; then
                         MATCHED_PART=1
                         break
@@ -106,12 +106,32 @@ for MNT in "/boot" "/boot/efi"; do
     fi
 
     if [[ "$MATCHED_PART" -ne 0 ]]; then
-        echo -n " ${ANSI_YELLOW}$PART_DST${ANSI_RESET}"
-        echo
-        if [[ "$DRY_RUN" -eq 0 ]]; then
-            dd if=$PART_SRC of=$PART_DST bs=1M |& sed -e 's/^/ /'
-        fi
+        echo -n " ${ANSI_YELLOW}$PART_DST${ANSI_RESET} "
+        BLOCK_SIZE=1048576  # 1 MB block
+        BLOCK_COUNT=100
+        TOTAL_BLOCKS=$(( PART_SRC_SIZE / BLOCK_SIZE ))  # must be 1 MB aligned
+        START_BLOCK=0
+        while [ $TOTAL_BLOCKS -gt 0 ]; do
+            echo -n "."
+            if [ $TOTAL_BLOCKS -ge $BLOCK_COUNT ]; then
+                if [[ "$DRY_RUN" -eq 0 ]]; then
+                    dd if=$PART_SRC of=$PART_DST skip=$START_BLOCK seek=$START_BLOCK bs=$BLOCK_SIZE count=$BLOCK_COUNT conv=notrunc,sync 2>/dev/null
+                else
+                    sleep 0.1
+                fi
+                TOTAL_BLOCKS=$(( TOTAL_BLOCKS - BLOCK_COUNT ))
+                START_BLOCK=$(( START_BLOCK + BLOCK_COUNT ))
+            else
+                if [[ "$DRY_RUN" -eq 0 ]]; then
+                    dd if=$PART_SRC of=$PART_DST skip=$START_BLOCK seek=$START_BLOCK bs=$BLOCK_SIZE count=$TOTAL_BLOCKS conv=notrunc,sync 2>/dev/null
+                else
+                    sleep 0.1
+                fi
+                TOTAL_BLOCKS=0
+            fi
+        done
         PROCESSED=$((PROCESSED+1))
+        echo
     else
         echo " ${ANSI_RED}-${ANSI_RESET}"
     fi
