@@ -48,7 +48,13 @@ for MNT in "/boot" "/boot/efi"; do
     PART_SRC_UUID=`blkid -s PARTUUID -o value $PART_SRC`
     PART_SRC_LABEL=`blkid -s PARTLABEL -o value $PART_SRC`
     if [[ "$PART_SRC_UUID" == "" ]] && [[ "$PART_SRC_LABEL" == "" ]]; then
-        echo "${ANSI_YELLOW}Cannot determine partition UUID or LABEL for $MNT${ANSI_RESET}"
+        echo "${ANSI_CYAN}$MNT${ANSI_RESET}: ${ANSI_YELLOW}Cannot determine partition UUID or LABEL${ANSI_RESET}"
+        continue
+    fi
+
+    PART_SRC_SIZE_1M=$(( PART_SRC_SIZE / 1048576 * 1048576 ))
+    if [ "$PART_SRC_SIZE" -ne "$PART_SRC_SIZE_1M" ]; then
+        echo "${ANSI_CYAN}$MNT${ANSI_RESET}: ${ANSI_YELLOW}Partition size is not 1 MB aligned${ANSI_RESET}"
         continue
     fi
 
