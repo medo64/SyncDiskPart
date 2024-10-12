@@ -116,6 +116,9 @@ for MNT in "/boot" "/boot/efi"; do
 
         echo -n " ${ANSI_YELLOW}$PART_DST${ANSI_RESET} "
 
+        sync -f $PART_SRC
+        sync -f $PART_DST
+
         BLOCK_SIZE=1048576  # 1 MB block
         BLOCK_COUNT=100
         TOTAL_BLOCKS=$(( PART_SRC_SIZE / BLOCK_SIZE ))  # must be 1 MB aligned
@@ -140,6 +143,9 @@ for MNT in "/boot" "/boot/efi"; do
                 TOTAL_BLOCKS=0
             fi
         done
+
+        sync -f $PART_DST
+
         PROCESSED=$((PROCESSED+1))
         echo
     else
